@@ -38,13 +38,12 @@ record Group (t : Type) where
     inv_r : (x : t) ->
             op x (inv x) = id
 
-record Subgroup (st : Type) (t : Type) where
+-- TODO: is this the representation we want?
+record Subgroup (st : Type) (t : Type) (g : Group t) where
     constructor MkSubgroup
 
-    ss : Subset st t
-    
+    ss : Subset st t 
     h : Group st
-    g : Group t
 
     safe : ss.i h.id = g.id
 
@@ -194,5 +193,79 @@ inv_semicommutes t g x y =
     g.inv_r x 
 
 
+
+record Exists (t : Type) (prop : t -> Type) where
+    constructor MkExists
+    -- the element
+    val : t
+    -- a function that takes x and a proof of what it satisfies
+    sat : prop val
+
+
+-- A subgroup is maximal with respect to some property
+maximal : (st : Type) ->
+          (t : Type) ->
+          (Subset st t) ->
+          (prop : t -> Type) ->
+          Type
+maximal st t ss prop =
+    (x : t) -> prop x -> Exists st (prop . ss.i)
+
+
+
+-- TODO: rewrite using a type for commute
+commutes : (t : Type) ->
+           (g : Group t) ->
+           (x : t) ->
+           Type
+commutes t g x =
+   (y : t) -> g.op x y = g.op y x 
+
+comm_compose : (t : Type) ->
+               (g : Group t) ->
+               (x : t) ->
+               (y : t) ->
+               (commutes t g x) ->
+               (commutes t g y) ->
+               (commutes t g (g.op x y))
+-- TODO: use this
+comm_inv : (t : Type) ->
+           (g : Group t) ->
+           (x : t) ->
+           (commutes t g x) ->
+           (commutes t g (g.inv x))
+
+
+record Center (st : Type) (t : Type) (g : Group t) (ss : Subset st t) where
+    constructor MkCenter
+
+    sats : (x : st) -> commutes t g (ss.i x)
+    maxi : maximal st t ss (\x => commutes t g x)
+
+
+center_is_subgroup : (st : Type) ->
+                     (t : Type)  ->
+                     (g : Group t) ->
+                     (ss : Subset st t) ->
+                     (cent : Center st t g ss) ->
+                     Subgroup st t g
 -- TODO : center, center is a group, existance and maximality (of a subset)
 --   then we want to prove the center of a group is a subgroup
+center_is_subgroup st t g ss cent =
+    MkSubgroup ss h ?safe
+    where
+        op' : st -> st -> st
+        op' x y = val $ cent.maxi (g.op (ss.i x) (ss.i y)) $
+                 comm_compose t g (ss.i x) (ss.i y) (cent.sats x) (cent.sats y)
+        
+        op_assoc' = ?op_assoc
+        
+        id' = val $ cent.maxi g.id (\y => trans (g.id_l y) $ sym $ g.id_r y)
+
+        inv' x = val $ cent.maxi (g.inv $ ss.i x) $ comm_inv t g (ss.i x) (cent.sats x)
+
+        inv_l' x = ?inv_l
+
+        h = MkGroup op' op_assoc' id' ?id_l ?id_r inv' inv_l' ?inv_r
+
+
