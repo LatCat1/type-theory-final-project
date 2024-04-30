@@ -45,7 +45,10 @@ record Subgroup (st : Type) (t : Type) (g : Group t) where
     ss : Subset st t 
     h : Group st
 
-    safe : ss.i h.id = g.id
+    safe_id : ss.i h.id = g.id
+    safe_op : (x : st) ->
+              (y : st) ->
+              ss.i (h.op x y) = g.op (ss.i x) (ss.i y)
 
 unique_id_l : (t : Type) ->
               (g : Group t) ->
@@ -209,7 +212,7 @@ maximal : (st : Type) ->
           (prop : t -> Type) ->
           Type
 maximal st t ss prop =
-    (x : t) -> prop x -> Exists st (prop . ss.i)
+    (x : t) -> prop x -> Exists st (\v => ss.i v = x)
 
 
 
@@ -236,6 +239,7 @@ comm_inv : (t : Type) ->
            (commutes t g (g.inv x))
 
 
+
 record Center (st : Type) (t : Type) (g : Group t) (ss : Subset st t) where
     constructor MkCenter
 
@@ -249,23 +253,72 @@ center_is_subgroup : (st : Type) ->
                      (ss : Subset st t) ->
                      (cent : Center st t g ss) ->
                      Subgroup st t g
--- TODO : center, center is a group, existance and maximality (of a subset)
---   then we want to prove the center of a group is a subgroup
+
 center_is_subgroup st t g ss cent =
-    MkSubgroup ss h ?safe
+    MkSubgroup ss h safe_id safe_op
     where
         op' : st -> st -> st
-        op' x y = val $ cent.maxi (g.op (ss.i x) (ss.i y)) $
-                 comm_compose t g (ss.i x) (ss.i y) (cent.sats x) (cent.sats y)
+        op'_base x y = cent.maxi (g.op (ss.i x) (ss.i y)) $
+                       comm_compose t g (ss.i x) (ss.i y) (cent.sats x) (cent.sats y)
+        op' x y = val $ op'_base x y         
+        safe_op x y = sat $ op'_base x y
+       
+
+        op_assoc' x y z = ss.i_inj 
+                            (op' (op' x y) z) 
+                            (op' x (op' y z)) $
+                            trans 
+                                (safe_op (op' x y) z) $
+                            trans
+                                (cong (flip g.op (ss.i z)) $ safe_op x y) $
+                            trans
+                                (g.op_assoc (ss.i x) (ss.i y) (ss.i z)) $
+                            trans
+                                (cong (g.op (ss.i x)) $ sym $ safe_op y z) $
+                            (sym $ safe_op x (op' y z))
+
+      
+        -- e commutes with everything, so there is an element in 
+        -- our underlying set that maps to it
+        -- id_p    : Exists st (\m => ss.i m = g.id)
+        id_p    = cent.maxi g.id (\y => trans (g.id_l y) $ sym $ g.id_r y)
+        -- id'     : st
+        id'     = id_p.val
+        -- safe_id : ss.i (id_p.val) = g.id
+        safe_id = sat id_p
+
+        id_l' x = ss.i_inj (op' id' x) x $ 
+                  trans (safe_op id' x) $
+                      trans (cong (flip g.op (ss.i x)) $ safe_id) $
+                            g.id_l (ss.i x)
         
-        op_assoc' = ?op_assoc
+        id_r' x = ss.i_inj (op' x id') x $ 
+                  trans (safe_op x id') $
+                      trans (cong (g.op (ss.i x)) $ safe_id) $
+                            g.id_r (ss.i x)
+
+
+        inv'_base x = cent.maxi (g.inv $ ss.i x) $ comm_inv t g (ss.i x) (cent.sats x)
+        inv'      x = val $ inv'_base x
+
+
+        -- honestly i have no clue how this works anymore
+        -- i think its i(x'x) = i(e) and then using injectivity
+        -- where x'x=e using that the operation is good with i
+        inv_l' x = ss.i_inj (op' (inv' x) x) id' $
+                   trans (safe_op (inv' x) x) $
+                       trans (cong (flip g.op (ss.i x)) $ sat $ inv'_base x) $
+                          trans (g.inv_l $ ss.i x)
+                                (sym $ safe_id) 
         
-        id' = val $ cent.maxi g.id (\y => trans (g.id_l y) $ sym $ g.id_r y)
+        -- thankfully this one is just symmetric
+        inv_r' x = ss.i_inj (op' x (inv' x)) id' $
+                   trans (safe_op x (inv' x)) $
+                       trans (cong (g.op (ss.i x)) $ sat $ inv'_base x) $
+                          trans (g.inv_r $ ss.i x)
+                                (sym $ safe_id)
 
-        inv' x = val $ cent.maxi (g.inv $ ss.i x) $ comm_inv t g (ss.i x) (cent.sats x)
 
-        inv_l' x = ?inv_l
-
-        h = MkGroup op' op_assoc' id' ?id_l ?id_r inv' inv_l' ?inv_r
+        h = MkGroup op' op_assoc' id' id_l' id_r' inv' inv_l' inv_r'
 
 
