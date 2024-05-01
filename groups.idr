@@ -216,7 +216,6 @@ maximal st t ss prop =
 
 
 
--- TODO: rewrite using a type for commute
 commutes : (t : Type) ->
            (g : Group t) ->
            (x : t) ->
