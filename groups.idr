@@ -201,7 +201,7 @@ record Exists (t : Type) (prop : t -> Type) where
     constructor MkExists
     -- the element
     val : t
-    -- a function that takes x and a proof of what it satisfies
+    -- a function that takes x returns and a proof of what it satisfies
     sat : prop val
 
 
