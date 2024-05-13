@@ -38,7 +38,6 @@ record Group (t : Type) where
     inv_r : (x : t) ->
             op x (inv x) = id
 
--- TODO: is this the representation we want?
 record Subgroup (st : Type) (t : Type) (g : Group t) where
     constructor MkSubgroup
 
@@ -231,7 +230,7 @@ comm_compose : (t : Type) ->
                (commutes t g x) ->
                (commutes t g y) ->
                (commutes t g (g.op x y))
--- TODO: use this
+
 comm_inv : (t : Type) ->
            (g : Group t) ->
            (x : t) ->
