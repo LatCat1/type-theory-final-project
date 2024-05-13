@@ -56,7 +56,8 @@ unique_id_l : (t : Type) ->
               ((x : t) -> (g.op id' x) = x) ->
               id' = g.id
 unique_id_l t g id' eq =
-    trans (sym (g.id_r id')) $ eq g.id
+    trans ?todo_example $ eq g.id
+
 unique_id_r : (t : Type) ->
               (g : Group t) ->
               (id' : t) ->
@@ -201,7 +202,7 @@ record Exists (t : Type) (prop : t -> Type) where
     constructor MkExists
     -- the element
     val : t
-    -- a function that takes x returns and a proof of what it satisfies
+    -- a function that takes x and returns a proof of it satisfying the proposition
     sat : prop val
 
 
